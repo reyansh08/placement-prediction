@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Placement Predictor | AI Applications Lab</title>
+<style>
+:root {
+  --bg: #F4F7FA; --surface: #FFFFFF; --surface2: #EAF2F5; --text: #15324B; --muted: #5B6B78;
+  --line: #D5DEE6; --brand: #14577D; --brand-text: #FFFFFF; --good: #1F8A70; --good-bg: #E3F4EE;
+  --bad: #C0504D; --bad-bg: #FBEAE9; --warn-bg: #FFF4D6; --warn-text: #6B4E00; --shadow: 0 1px 3px rgba(20,50,80,.10);
+  color-scheme: light;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1A24; --surface: #17242F; --surface2: #1E3140; --text: #E6EEF5; --muted: #9FB0BF;
+    --line: #2C4152; --brand: #4DA3D4; --brand-text: #08202F; --good: #4CC2A0; --good-bg: #123A31;
+    --bad: #F08481; --bad-bg: #3F1F1F; --warn-bg: #3F3410; --warn-text: #F4D77A; --shadow: none;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1A24; --surface: #17242F; --surface2: #1E3140; --text: #E6EEF5; --muted: #9FB0BF;
+  --line: #2C4152; --brand: #4DA3D4; --brand-text: #08202F; --good: #4CC2A0; --good-bg: #123A31;
+  --bad: #F08481; --bad-bg: #3F1F1F; --warn-bg: #3F3410; --warn-text: #F4D77A; --shadow: none;
+  color-scheme: dark;
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 16px; }
+header.top { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 8px 0 14px; }
+h1 { font-size: 1.45rem; margin: 0; letter-spacing: .2px; }
+.sub { color: var(--muted); font-size: .88rem; margin-top: 2px; }
+.chip { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: .8rem; font-weight: 600; background: var(--surface2); color: var(--text); border: 1px solid var(--line); }
+.chip.good { background: var(--good-bg); color: var(--good); border-color: transparent; }
+.chip.demo { background: var(--warn-bg); color: var(--warn-text); border-color: transparent; }
+button, .btn { font: inherit; cursor: pointer; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); padding: 8px 14px; min-height: 40px; }
+button.primary, .btn.primary { background: var(--brand); color: var(--brand-text); border-color: var(--brand); font-weight: 600; }
+button:focus-visible, input:focus-visible, select:focus-visible, label.btn:focus-within { outline: 3px solid var(--brand); outline-offset: 2px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); }
+.banner { background: var(--warn-bg); color: var(--warn-text); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-size: .92rem; }
+.error { background: var(--bad-bg); color: var(--bad); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; }
+.drop { border: 2px dashed var(--line); border-radius: 14px; padding: 22px 16px; text-align: center; background: var(--surface); }
+.drop.over { border-color: var(--brand); background: var(--surface2); }
+.drop p { margin: 6px 0; color: var(--muted); }
+.row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 10px; }
+nav.tabs { display: flex; gap: 6px; overflow-x: auto; margin: 4px 0 14px; padding-bottom: 2px; }
+nav.tabs button { border-radius: 999px; white-space: nowrap; }
+nav.tabs button[aria-selected="true"] { background: var(--brand); color: var(--brand-text); border-color: var(--brand); font-weight: 600; }
+.grid2 { display: grid; grid-template-columns: 1.1fr .9fr; gap: 14px; align-items: start; }
+@media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } th, td { padding: 7px 6px; font-size: .78rem; } td:first-child, th:first-child { white-space: normal; min-width: 108px; } }
+.field { margin-bottom: 14px; }
+.field label { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; font-size: .92rem; margin-bottom: 4px; }
+.field .hint { color: var(--muted); font-weight: 400; font-size: .78rem; }
+.ctrl { display: flex; gap: 10px; align-items: center; }
+.ctrl input[type=range] { flex: 1; min-width: 0; accent-color: var(--brand); }
+.ctrl input[type=number], select { font: inherit; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); min-height: 40px; }
+.ctrl input[type=number] { width: 92px; }
+select { width: 100%; }
+.badge { border-radius: 14px; padding: 14px; text-align: center; }
+.badge.good { background: var(--good-bg); color: var(--good); }
+.badge.bad { background: var(--bad-bg); color: var(--bad); }
+.badge .big { font-size: 1.5rem; font-weight: 800; line-height: 1.2; }
+.badge .pct { font-size: 2.4rem; font-weight: 800; }
+.gauge { position: relative; height: 12px; border-radius: 999px; background: var(--surface2); margin: 14px 0 4px; overflow: visible; }
+.gauge .fill { height: 100%; border-radius: 999px; background: var(--brand); }
+.gauge .mark { position: absolute; top: -4px; width: 2px; height: 20px; background: var(--text); opacity: .6; }
+.gl { display: flex; justify-content: space-between; font-size: .75rem; color: var(--muted); }
+h2 { font-size: 1.05rem; margin: 0 0 10px; }
+h3 { font-size: .95rem; margin: 16px 0 8px; }
+.bars .b { display: grid; grid-template-columns: minmax(110px, 46%) 1fr 52px; gap: 8px; align-items: center; margin: 6px 0; font-size: .85rem; }
+.bars .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bars .track { height: 12px; background: var(--surface2); border-radius: 6px; position: relative; }
+.bars .bar { position: absolute; top: 0; bottom: 0; border-radius: 6px; }
+.bars .val { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pos { background: var(--good); } .neg { background: var(--bad); } .neu { background: var(--brand); }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; text-align: center; }
+.stat .n { font-size: 1.5rem; font-weight: 800; color: var(--brand); }
+.stat .l { font-size: .78rem; color: var(--muted); }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--muted); font-weight: 600; font-size: .78rem; }
+tr.sel td { background: var(--surface2); font-weight: 700; }
+.cm { display: grid; grid-template-columns: auto 1fr 1fr; gap: 6px; max-width: 360px; font-size: .85rem; align-items: stretch; }
+.cm div { padding: 12px 8px; border-radius: 10px; text-align: center; }
+.cm .h { color: var(--muted); font-size: .75rem; padding: 4px; display: flex; align-items: center; justify-content: center; }
+.cm .ok { background: var(--good-bg); color: var(--good); font-weight: 800; font-size: 1.2rem; }
+.cm .no { background: var(--bad-bg); color: var(--bad); font-weight: 800; font-size: 1.2rem; }
+.muted { color: var(--muted); }
+.small { font-size: .82rem; }
+ol.steps { padding-left: 20px; margin: 8px 0; } ol.steps li { margin: 6px 0; }
+code, .formula { font-family: ui-monospace, Consolas, monospace; background: var(--surface2); padding: 2px 6px; border-radius: 6px; font-size: .88em; }
+.formula { display: block; padding: 10px 12px; margin: 8px 0; overflow-x: auto; }
+footer { color: var(--muted); font-size: .78rem; padding: 18px 0 10px; text-align: center; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Placement Predictor</h1>
+      <div class="sub">AI Applications Lab (26ECP-102) &middot; Project #81 Student Placement Prediction</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span id="status" class="chip">No model loaded</span>
+      <label class="btn" id="changeBtn" hidden>Change model<input type="file" id="fileChange" accept=".json,application/json" hidden></label>
+    </div>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+  <div id="error" class="error" role="alert" hidden></div>
+
+  <section id="loader" class="drop" aria-label="Load model">
+    <h2 style="margin-top:0">Load your trained model</h2>
+    <p>Run the Colab notebook, then upload the <code>placement_model.json</code> file it saves. Everything stays in your browser.</p>
+    <div class="row">
+      <label class="btn primary">Choose placement_model.json<input type="file" id="file" accept=".json,application/json" hidden></label>
+      <button id="demoBtn" type="button">Try with the demo model</button>
+    </div>
+    <p class="small">Or drag and drop the file here.</p>
+  </section>
+
+  <main id="app" hidden>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button role="tab" id="t-predict" aria-selected="true" data-tab="predict">Predict</button>
+      <button role="tab" id="t-results" aria-selected="false" data-tab="results">Model results</button>
+      <button role="tab" id="t-insights" aria-selected="false" data-tab="insights">Insights</button>
+      <button role="tab" id="t-how" aria-selected="false" data-tab="how">How it works</button>
+    </nav>
+
+    <section id="p-predict" role="tabpanel" aria-labelledby="t-predict">
+      <div class="grid2">
+        <div class="card">
+          <h2>Student details</h2>
+          <div id="form"></div>
+          <div class="row" style="justify-content:flex-start;margin-top:0">
+            <button class="primary" id="predictBtn" type="button">Predict placement</button>
+            <button id="resetBtn" type="button">Reset to typical values</button>
+          </div>
+        </div>
+        <div class="card" aria-live="polite">
+          <h2>Prediction</h2>
+          <div id="result" class="muted">Adjust the details and press <b>Predict placement</b>.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="p-results" role="tabpanel" aria-labelledby="t-results" hidden></section>
+    <section id="p-insights" role="tabpanel" aria-labelledby="t-insights" hidden></section>
+    <section id="p-how" role="tabpanel" aria-labelledby="t-how" hidden></section>
+  </main>
+
+  <footer>Decision-support tool for learning purposes. It estimates a likelihood from past data and must not be used to select or reject real students.</footer>
+</div>
+
+<script>
+/* ===================== core model logic ===================== */
+function sigmoid(z) { return 1 / (1 + Math.exp(-z)); }
+
+function defaultValues(m) {
+  const v = {};
+  for (const f of m.numeric) v[f.name] = f.median;
+  for (const f of m.categorical) v[f.name] = f.mode;
+  return v;
+}
+
+function predictModel(m, vals) {
+  let z = m.intercept;
+  const contrib = [];
+  for (const f of m.numeric) {
+    let x = parseFloat(vals[f.name]);
+    if (!isFinite(x)) x = f.median;
+    const c = f.coef * (x - f.mean) / (f.scale || 1);
+    z += c;
+    contrib.push({ name: f.name, value: x, c: c, kind: "num" });
+  }
+  for (const f of m.categorical) {
+    const sel = String(vals[f.name] !== undefined ? vals[f.name] : f.mode);
+    const lvl = f.levels.find(function (l) { return l.value === sel; });
+    const c = lvl ? lvl.coef : 0;
+    z += c;
+    contrib.push({ name: f.name, value: sel, c: c, kind: "cat" });
+  }
+  return { p: sigmoid(z), z: z, contrib: contrib };
+}
+
+function validateModel(m) {
+  if (!m || typeof m !== "object") throw new Error("This file is not a model file.");
+  if (typeof m.intercept !== "number" || !Array.isArray(m.numeric) || !Array.isArray(m.categorical))
+    throw new Error("This does not look like a placement_model.json file from the notebook (Step 11).");
+  for (const f of m.numeric)
+    if (typeof f.name !== "string" || ["median", "mean", "scale", "coef", "min", "max"].some(function (k) { return typeof f[k] !== "number"; }))
+      throw new Error("A numeric feature in the file is incomplete.");
+  for (const f of m.categorical)
+    if (typeof f.name !== "string" || !Array.isArray(f.levels) || !f.levels.length)
+      throw new Error("A categorical feature in the file is incomplete.");
+  return m;
+}
+
+function niceStep(f) {
+  if (f.integer) return 1;
+  const r = f.max - f.min;
+  if (r <= 0) return 0.1;
+  const raw = r / 100, opts = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5];
+  for (const o of opts) if (o >= raw) return o;
+  return 5;
+}
+if (typeof module !== "undefined") module.exports = { predictModel, validateModel, defaultValues, sigmoid, niceStep };
+</script>
+
+<script>
+/* ===================== interface ===================== */
+const DEMO_MODEL = {"version":1,"project":"Student Placement Prediction","synthetic":true,"dataset":"demo (synthetic data)","n_rows":3000,"n_train":2400,"n_test":600,"target":"Placement","model":"Logistic Regression (tuned)","intercept":-0.41588919934077023,"threshold":0.5,"numeric":[{"name":"IQ","median":100.0,"mean":100.48458333333333,"scale":14.89000545085155,"min":56.0,"max":149.0,"integer":true,"coef":0.22574463227589048},{"name":"Prev_Sem_Result","median":7.525,"mean":7.520275000000002,"scale":0.9950499188692328,"min":5.0,"max":10.0,"integer":false,"coef":0.0001396687496192499},{"name":"CGPA","median":7.44,"mean":7.468304166666667,"scale":0.9827172783406759,"min":5.0,"max":10.0,"integer":false,"coef":0.7776986133593891},{"name":"Academic_Performance","median":5.0,"mean":5.354166666666667,"scale":2.848753991757722,"min":1.0,"max":10.0,"integer":true,"coef":-0.05938644480956758},{"name":"Extra_Curricular_Score","median":5.0,"mean":4.9991666666666665,"scale":3.152776443954686,"min":0.0,"max":10.0,"integer":true,"coef":-0.059548226898244794},{"name":"Communication_Skills","median":5.0,"mean":5.5075,"scale":2.867625687451787,"min":1.0,"max":10.0,"integer":true,"coef":0.26074419127560855},{"name":"Projects_Completed","median":3.0,"mean":2.52125,"scale":1.7120791757879268,"min":0.0,"max":5.0,"integer":true,"coef":0.29860789098915796}],"categorical":[{"name":"Internship_Experience","mode":"No","levels":[{"value":"No","coef":0.0},{"value":"Yes","coef":0.40059901568357376}]}],"metrics":[{"model":"Baseline (majority class)","cv_accuracy":0.7683333333333333,"accuracy":0.7683333333333333,"precision":0.0,"recall":0.0,"f1":0.0,"roc_auc":0.5},{"model":"Logistic Regression","cv_accuracy":0.7024999999999999,"accuracy":0.74,"precision":0.46255506607929514,"recall":0.7553956834532374,"f1":0.5737704918032787,"roc_auc":0.822812465862451},{"model":"Decision Tree","cv_accuracy":0.66875,"accuracy":0.7066666666666667,"precision":0.4206008583690987,"recall":0.7050359712230215,"f1":0.5268817204301075,"roc_auc":0.7513694033926872},{"model":"Random Forest","cv_accuracy":0.7837500000000001,"accuracy":0.8033333333333333,"precision":0.6721311475409836,"recall":0.2949640287769784,"f1":0.41,"roc_auc":0.7795611666848734},{"model":"Logistic Regression (tuned)","cv_accuracy":0.7041666666666667,"accuracy":0.7283333333333334,"precision":0.4473684210526316,"recall":0.7338129496402878,"f1":0.555858310626703,"roc_auc":0.8235303297492158},{"model":"Random Forest (tuned)","cv_accuracy":0.7866666666666666,"accuracy":0.8133333333333334,"precision":0.7142857142857143,"recall":0.3237410071942446,"f1":0.44554455445544555,"roc_auc":0.78558498103903}],"confusion":{"tn":335,"fp":126,"fn":37,"tp":102},"class_counts":{"placed":695,"not_placed":2305},"rf_importance":[{"feature":"CGPA","importance":0.30175225260805905},{"feature":"Prev_Sem_Result","importance":0.15167799536959942},{"feature":"IQ","importance":0.15064230760116465},{"feature":"Communication_Skills","importance":0.09647287389846029},{"feature":"Extra_Curricular_Score","importance":0.09510015109857758},{"feature":"Academic_Performance","importance":0.09351084713664415},{"feature":"Projects_Completed","importance":0.08073483166001445},{"feature":"Internship_Experience_Yes","importance":0.03010874062748048}]};
+
+let MODEL = null, VALS = {};
+const $ = function (id) { return document.getElementById(id); };
+
+function el(tag, attrs, kids) {
+  const e = document.createElement(tag);
+  if (attrs) for (const k in attrs) {
+    if (k === "class") e.className = attrs[k];
+    else if (k === "text") e.textContent = attrs[k];
+    else e.setAttribute(k, attrs[k]);
+  }
+  (kids || []).forEach(function (c) { e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+  return e;
+}
+const label = function (s) { return String(s).replace(/_/g, " "); };
+const pct = function (x) { return (x * 100).toFixed(1) + "%"; };
+const fmt = function (x) { return Math.abs(x) >= 100 ? x.toFixed(0) : Math.abs(x) >= 10 ? x.toFixed(1) : x.toFixed(2); };
+const fmtVal = function (x) { return Number.isInteger(x) ? String(x) : x.toFixed(2).replace(/0+$/, "").replace(/\.$/, ""); };
+
+function showError(msg) { const e = $("error"); e.textContent = msg; e.hidden = !msg; }
+
+function loadModel(m, source) {
+  try { validateModel(m); } catch (err) { showError(err.message); return; }
+  showError("");
+  MODEL = m; VALS = defaultValues(m);
+  $("loader").hidden = true; $("app").hidden = false; $("changeBtn").hidden = false;
+  const st = $("status");
+  st.className = "chip " + (m.synthetic ? "demo" : "good");
+  st.textContent = m.synthetic ? "Demo model (synthetic data)" : "Model loaded: " + (m.model || "Logistic Regression");
+  const b = $("banner");
+  if (m.synthetic) {
+    b.hidden = false;
+    b.textContent = "Demo model built from synthetic data. The numbers shown are NOT real results. For your project, run the Colab notebook and load your own placement_model.json.";
+  } else { b.hidden = true; }
+  buildForm(); renderResult(); renderResults(); renderInsights(); renderHow();
+  selectTab("predict");
+}
+
+/* ---------- predict tab ---------- */
+function buildForm() {
+  const form = $("form"); form.textContent = "";
+  MODEL.numeric.forEach(function (f) {
+    const step = niceStep(f);
+    const range = el("input", { type: "range", min: f.min, max: f.max, step: step, "aria-label": label(f.name) });
+    const num = el("input", { type: "number", min: f.min, max: f.max, step: step, "aria-label": label(f.name) + " value" });
+    range.value = num.value = VALS[f.name];
+    const sync = function (src) { return function () { VALS[f.name] = parseFloat(src.value); range.value = num.value = src.value; renderResult(); }; };
+    range.addEventListener("input", sync(range)); num.addEventListener("input", sync(num));
+    form.appendChild(el("div", { class: "field" }, [
+      el("label", {}, [label(f.name), el("span", { class: "hint", text: "range " + fmtVal(f.min) + " to " + fmtVal(f.max) })]),
+      el("div", { class: "ctrl" }, [range, num])]));
+  });
+  MODEL.categorical.forEach(function (f) {
+    const sel = el("select", { "aria-label": label(f.name) });
+    f.levels.forEach(function (l) { sel.appendChild(el("option", { value: l.value, text: l.value })); });
+    sel.value = VALS[f.name];
+    sel.addEventListener("change", function () { VALS[f.name] = sel.value; renderResult(); });
+    form.appendChild(el("div", { class: "field" }, [el("label", {}, [label(f.name)]), sel]));
+  });
+}
+
+function renderResult() {
+  const r = predictModel(MODEL, VALS), thr = MODEL.threshold || 0.5, yes = r.p >= thr, box = $("result");
+  box.className = ""; box.textContent = "";
+  box.appendChild(el("div", { class: "badge " + (yes ? "good" : "bad") }, [
+    el("div", { class: "big", text: yes ? "Likely to be placed" : "Less likely to be placed" }),
+    el("div", { class: "pct", text: pct(r.p) }),
+    el("div", { class: "small", text: "estimated probability of placement" })]));
+  const g = el("div", { class: "gauge", role: "img", "aria-label": "Probability " + pct(r.p) }, [
+    el("div", { class: "fill", style: "width:" + (r.p * 100).toFixed(1) + "%" }),
+    el("div", { class: "mark", style: "left:" + (thr * 100) + "%" })]);
+  box.appendChild(g);
+  box.appendChild(el("div", { class: "gl" }, [el("span", { text: "0%" }), el("span", { text: "threshold " + Math.round(thr * 100) + "%" }), el("span", { text: "100%" })]));
+  box.appendChild(el("h3", { text: "What pushed this prediction" }));
+  const top = r.contrib.slice().sort(function (a, b) { return Math.abs(b.c) - Math.abs(a.c); }).slice(0, 5);
+  const mx = Math.max.apply(null, top.map(function (t) { return Math.abs(t.c); }).concat([0.0001]));
+  const bars = el("div", { class: "bars" });
+  top.forEach(function (t) {
+    const w = (Math.abs(t.c) / mx * 50).toFixed(1);
+    const bar = el("div", { class: "bar " + (t.c >= 0 ? "pos" : "neg"), style: (t.c >= 0 ? "left:50%;" : "right:50%;") + "width:" + w + "%" });
+    bars.appendChild(el("div", { class: "b" }, [
+      el("div", { class: "name", title: label(t.name), text: label(t.name) + " = " + (t.kind === "num" ? fmtVal(t.value) : t.value) }),
+      el("div", { class: "track" }, [bar]),
+      el("div", { class: "val", text: (t.c >= 0 ? "+" : "") + t.c.toFixed(2) })]));
+  });
+  box.appendChild(bars);
+  box.appendChild(el("p", { class: "small muted", text: "Green bars push towards placement, red bars push away. Values are contributions to the model score, based on patterns in the training data, not causes." }));
+}
+
+/* ---------- results tab ---------- */
+function renderResults() {
+  const p = $("p-results"); p.textContent = "";
+  const dep = MODEL.model || "Logistic Regression";
+  const row = (MODEL.metrics || []).find(function (r) { return r.model === dep; }) || (MODEL.metrics || [])[1];
+  p.appendChild(el("p", { class: "muted small", text: "Results computed in Google Colab with scikit-learn on the held-out test set (" + (MODEL.n_test || "?") + " students). Deployed model: " + dep + "." }));
+  if (row) {
+    const cards = el("div", { class: "cards" });
+    [["Accuracy", row.accuracy], ["Precision", row.precision], ["Recall", row.recall], ["F1-score", row.f1], ["ROC-AUC", row.roc_auc]].forEach(function (c) {
+      cards.appendChild(el("div", { class: "stat" }, [el("div", { class: "n", text: c[1] == null ? "-" : c[1].toFixed(3) }), el("div", { class: "l", text: c[0] })]));
+    });
+    p.appendChild(cards);
+  }
+  const card = el("div", { class: "card" });
+  card.appendChild(el("h2", { text: "Model comparison" }));
+  const t = el("table"), th = el("tr");
+  ["Model", "CV acc.", "Test acc.", "Precision", "Recall", "F1", "ROC-AUC"].forEach(function (h) { th.appendChild(el("th", { text: h })); });
+  t.appendChild(el("thead", {}, [th]));
+  const tb = el("tbody");
+  (MODEL.metrics || []).forEach(function (r) {
+    const tr = el("tr", { class: r.model === dep ? "sel" : "" });
+    [r.model, r.cv_accuracy, r.accuracy, r.precision, r.recall, r.f1, r.roc_auc].forEach(function (v, i) {
+      tr.appendChild(el("td", { text: i === 0 ? v + (r.model === dep ? " (deployed)" : "") : (typeof v === "number" ? v.toFixed(3) : "-") }));
+    });
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb); card.appendChild(el("div", { class: "scroll" }, [t]));
+  p.appendChild(card);
+  if (MODEL.confusion) {
+    const c = MODEL.confusion, cc = el("div", { class: "card", style: "margin-top:14px" });
+    cc.appendChild(el("h2", { text: "Confusion matrix (deployed model, test set)" }));
+    cc.appendChild(el("div", { class: "cm" }, [
+      el("div", { class: "h" }), el("div", { class: "h", text: "Predicted: Not placed" }), el("div", { class: "h", text: "Predicted: Placed" }),
+      el("div", { class: "h", text: "Actual: Not placed" }), el("div", { class: "ok", text: String(c.tn) }), el("div", { class: "no", text: String(c.fp) }),
+      el("div", { class: "h", text: "Actual: Placed" }), el("div", { class: "no", text: String(c.fn) }), el("div", { class: "ok", text: String(c.tp) })]));
+    cc.appendChild(el("p", { class: "small muted", text: "Green = correct predictions. Red = mistakes: " + c.fp + " not-placed students predicted as placed, and " + c.fn + " placed students that the model missed." }));
+    p.appendChild(cc);
+  }
+}
+
+/* ---------- insights tab ---------- */
+function barList(items, signed) {
+  const mx = Math.max.apply(null, items.map(function (i) { return Math.abs(i.v); }).concat([0.0001]));
+  const box = el("div", { class: "bars" });
+  items.forEach(function (i) {
+    const w = (Math.abs(i.v) / mx * (signed ? 50 : 100)).toFixed(1);
+    const style = signed ? (i.v >= 0 ? "left:50%;" : "right:50%;") + "width:" + w + "%" : "left:0;width:" + w + "%";
+    box.appendChild(el("div", { class: "b" }, [
+      el("div", { class: "name", title: i.n, text: i.n }),
+      el("div", { class: "track" }, [el("div", { class: "bar " + (signed ? (i.v >= 0 ? "pos" : "neg") : "neu"), style: style })]),
+      el("div", { class: "val", text: (signed && i.v >= 0 ? "+" : "") + i.v.toFixed(2) })]));
+  });
+  return box;
+}
+function renderInsights() {
+  const p = $("p-insights"); p.textContent = "";
+  const coefs = [];
+  MODEL.numeric.forEach(function (f) { coefs.push({ n: label(f.name), v: f.coef }); });
+  MODEL.categorical.forEach(function (f) { f.levels.forEach(function (l) { if (l.coef !== 0) coefs.push({ n: label(f.name) + ": " + l.value, v: l.coef }); }); });
+  coefs.sort(function (a, b) { return Math.abs(b.v) - Math.abs(a.v); });
+  const c1 = el("div", { class: "card" });
+  c1.appendChild(el("h2", { text: "Logistic Regression coefficients" }));
+  c1.appendChild(el("p", { class: "small muted", text: "Numeric features are standardised, so bar sizes can be compared. Green raises the chance of placement, red lowers it." }));
+  c1.appendChild(barList(coefs.slice(0, 10), true));
+  p.appendChild(c1);
+  if (MODEL.rf_importance && MODEL.rf_importance.length) {
+    const c2 = el("div", { class: "card", style: "margin-top:14px" });
+    c2.appendChild(el("h2", { text: "Random Forest feature importance" }));
+    c2.appendChild(el("p", { class: "small muted", text: "How much each feature helped the forest of trees make decisions (from the Colab notebook)." }));
+    c2.appendChild(barList(MODEL.rf_importance.map(function (r) { return { n: label(r.feature), v: r.importance }; }), false));
+    p.appendChild(c2);
+  }
+  if (MODEL.class_counts) {
+    const a = MODEL.class_counts.placed, b = MODEL.class_counts.not_placed, tot = a + b;
+    const c3 = el("div", { class: "card", style: "margin-top:14px" });
+    c3.appendChild(el("h2", { text: "Class balance in the dataset (" + tot + " students)" }));
+    c3.appendChild(el("div", { class: "gauge", style: "height:18px" }, [el("div", { class: "fill", style: "width:" + (a / tot * 100).toFixed(1) + "%;background:var(--good)" })]));
+    c3.appendChild(el("div", { class: "gl" }, [el("span", { text: "Placed: " + a + " (" + pct(a / tot) + ")" }), el("span", { text: "Not placed: " + b + " (" + pct(b / tot) + ")" })]));
+    c3.appendChild(el("p", { class: "small muted", text: "If one class is much bigger, accuracy alone can mislead, so precision, recall and F1 are also reported." }));
+    p.appendChild(c3);
+  }
+}
+
+/* ---------- how it works ---------- */
+function renderHow() {
+  const p = $("p-how"); p.textContent = "";
+  const c = el("div", { class: "card" });
+  c.appendChild(el("h2", { text: "How this interface works" }));
+  const ol = el("ol", { class: "steps" });
+  ["The notebook loads the Kaggle placement data, removes ID and leakage columns (such as salary) and explores the data.",
+   "A scikit-learn pipeline fills missing values, scales numeric features and one-hot encodes categories.",
+   "Logistic Regression, Decision Tree and Random Forest are trained with cross-validation and compared with a majority-class baseline.",
+   "The Logistic Regression weights and the evaluation results are saved to placement_model.json (Step 11).",
+   "This page loads that file in your browser. Your inputs are standardised the same way as in training and passed through the formula below."]
+    .forEach(function (t) { ol.appendChild(el("li", { text: t })); });
+  c.appendChild(ol);
+  c.appendChild(el("div", { class: "formula", text: "z = b + w1*x1 + w2*x2 + ... + wn*xn" }));
+  c.appendChild(el("div", { class: "formula", text: "probability of placement = 1 / (1 + e^(-z))" }));
+  c.appendChild(el("p", { class: "small muted", text: "This model: " + MODEL.numeric.length + " numeric and " + MODEL.categorical.length + " categorical features, intercept b = " + MODEL.intercept.toFixed(3) + ". The notebook checks that this formula matches scikit-learn exactly." }));
+  p.appendChild(c);
+}
+
+/* ---------- tabs and loading ---------- */
+function selectTab(name) {
+  document.querySelectorAll("nav.tabs button").forEach(function (b) { b.setAttribute("aria-selected", String(b.dataset.tab === name)); });
+  ["predict", "results", "insights", "how"].forEach(function (n) { $("p-" + n).hidden = n !== name; });
+}
+document.querySelectorAll("nav.tabs button").forEach(function (b) { b.addEventListener("click", function () { selectTab(b.dataset.tab); }); });
+$("predictBtn").addEventListener("click", function () { renderResult(); $("result").scrollIntoView({ behavior: "smooth", block: "nearest" }); });
+$("resetBtn").addEventListener("click", function () { VALS = defaultValues(MODEL); buildForm(); renderResult(); });
+$("demoBtn").addEventListener("click", function () { loadModel(JSON.parse(JSON.stringify(DEMO_MODEL))); });
+
+function readFile(file) {
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = function () {
+    try { loadModel(JSON.parse(r.result)); } catch (e) { showError("Could not read this file as JSON. Please upload placement_model.json from the notebook."); }
+  };
+  r.onerror = function () { showError("Could not read the file."); };
+  r.readAsText(file);
+}
+$("file").addEventListener("change", function (e) { readFile(e.target.files[0]); });
+$("fileChange").addEventListener("change", function (e) { readFile(e.target.files[0]); e.target.value = ""; });
+const dz = $("loader");
+["dragenter", "dragover"].forEach(function (ev) { dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.add("over"); }); });
+["dragleave", "drop"].forEach(function (ev) { dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.remove("over"); }); });
+dz.addEventListener("drop", function (e) { readFile(e.dataTransfer.files[0]); });
+</script>
+</body>
+</html>
